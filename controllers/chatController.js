@@ -1,11 +1,17 @@
-const supabase = require('../config/supabase');
+ const supabase = require('../config/supabase');
 
-// ============== إنشاء محادثة ==============
+// 🔓 استخدم doctor_id ثابت للتجربة
+const DEFAULT_DOCTOR_ID = '5b075375-0b21-4e67-91c8-1ab2c709fa85';
+
+// ==============================================
+// 1. إنشاء محادثة جديدة
+// ==============================================
 const createChatRoom = async (req, res) => {
   try {
-    const doctorId = req.doctor.id;
+    const doctorId = req.body.doctor_id || DEFAULT_DOCTOR_ID;
     const { patient_id, patient_name, patient_phone } = req.body;
 
+    // التحقق من البيانات
     if (!patient_id || !patient_name) {
       return res.status(400).json({
         success: false,
@@ -13,22 +19,21 @@ const createChatRoom = async (req, res) => {
       });
     }
 
-    // التأكد من وجود المريض
+    // التحقق من وجود المريض
     const { data: patient, error: patientError } = await supabase
       .from('patients')
       .select('id, name, phone')
       .eq('id', patient_id)
-      .eq('doctor_id', doctorId)
       .single();
 
     if (patientError || !patient) {
       return res.status(404).json({
         success: false,
-        error: 'Patient not found or not authorized'
+        error: 'Patient not found'
       });
     }
 
-    // التأكد من عدم وجود محادثة مكررة
+    // التحقق من عدم وجود محادثة مكررة
     const { data: existing, error: checkError } = await supabase
       .from('chat_rooms')
       .select('id, status')
@@ -46,14 +51,14 @@ const createChatRoom = async (req, res) => {
       });
     }
 
-    // إنشاء محادثة جديدة
+    // إنشاء المحادثة
     const { data, error } = await supabase
       .from('chat_rooms')
       .insert([{
         doctor_id: doctorId,
         patient_id: patient_id,
         patient_name: patient.name || patient_name,
-        patient_phone: patient.phone || patient_phone,
+        patient_phone: patient.phone || patient_phone || '',
         status: 'active'
       }])
       .select()
@@ -69,30 +74,25 @@ const createChatRoom = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Create chat room error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 
-// ============== جلب كل المحادثات ==============
+// ==============================================
+// 2. جلب كل المحادثات
+// ==============================================
 const getChatRooms = async (req, res) => {
   try {
-    const doctorId = req.doctor.id;
+    const doctorId = req.query.doctor_id || DEFAULT_DOCTOR_ID;
     const { status } = req.query;
 
     let query = supabase
       .from('chat_rooms')
-      .select(`
-        *,
-        messages:messages(
-          id,
-          message,
-          sender_type,
-          created_at,
-          is_read,
-          message_type,
-          file_url
-        )
-      `)
+      .select('*')
       .eq('doctor_id', doctorId)
       .order('updated_at', { ascending: false });
 
@@ -104,37 +104,27 @@ const getChatRooms = async (req, res) => {
 
     if (error) throw error;
 
-    // حساب الرسائل غير المقروءة
-    const roomsWithUnread = data.map(room => {
-      const unreadCount = room.messages?.filter(
-        m => m.sender_type === 'patient' && !m.is_read
-      ).length || 0;
-      
-      const lastMessage = room.messages?.[room.messages.length - 1] || null;
-
-      return {
-        ...room,
-        unread_count: unreadCount,
-        last_message: lastMessage
-      };
-    });
-
     res.json({
       success: true,
-      rooms: roomsWithUnread,
-      count: roomsWithUnread.length
+      rooms: data,
+      count: data.length
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Get chat rooms error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 
-// ============== جلب محادثة معينة ==============
+// ==============================================
+// 3. جلب محادثة معينة مع رسائلها
+// ==============================================
 const getChatRoom = async (req, res) => {
   try {
     const { roomId } = req.params;
-    const doctorId = req.doctor.id;
 
     const { data: room, error } = await supabase
       .from('chat_rooms')
@@ -152,23 +142,14 @@ const getChatRoom = async (req, res) => {
         )
       `)
       .eq('id', roomId)
-      .eq('doctor_id', doctorId)
       .single();
 
     if (error || !room) {
       return res.status(404).json({
         success: false,
-        error: 'Chat room not found or not authorized'
+        error: 'Chat room not found'
       });
     }
-
-    // تحديث الرسائل غير المقروءة
-    await supabase
-      .from('messages')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('room_id', roomId)
-      .eq('sender_type', 'patient')
-      .eq('is_read', false);
 
     res.json({
       success: true,
@@ -176,16 +157,21 @@ const getChatRoom = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Get chat room error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 
-// ============== تحديث حالة المحادثة ==============
+// ==============================================
+// 4. تحديث حالة المحادثة
+// ==============================================
 const updateChatRoomStatus = async (req, res) => {
   try {
     const { roomId } = req.params;
     const { status } = req.body;
-    const doctorId = req.doctor.id;
 
     if (!status || !['active', 'closed', 'archived'].includes(status)) {
       return res.status(400).json({
@@ -196,16 +182,18 @@ const updateChatRoomStatus = async (req, res) => {
 
     const { data, error } = await supabase
       .from('chat_rooms')
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({
+        status,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', roomId)
-      .eq('doctor_id', doctorId)
       .select()
       .single();
 
     if (error || !data) {
       return res.status(404).json({
         success: false,
-        error: 'Chat room not found or not authorized'
+        error: 'Chat room not found'
       });
     }
 
@@ -216,29 +204,20 @@ const updateChatRoomStatus = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Update chat room error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 
-// ============== حذف محادثة ==============
+// ==============================================
+// 5. حذف محادثة
+// ==============================================
 const deleteChatRoom = async (req, res) => {
   try {
     const { roomId } = req.params;
-    const doctorId = req.doctor.id;
-
-    const { data: existing, error: checkError } = await supabase
-      .from('chat_rooms')
-      .select('id')
-      .eq('id', roomId)
-      .eq('doctor_id', doctorId)
-      .single();
-
-    if (checkError || !existing) {
-      return res.status(404).json({
-        success: false,
-        error: 'Chat room not found or not authorized'
-      });
-    }
 
     const { error } = await supabase
       .from('chat_rooms')
@@ -253,7 +232,11 @@ const deleteChatRoom = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Delete chat room error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 

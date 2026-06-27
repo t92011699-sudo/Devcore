@@ -1,7 +1,8 @@
-const express = require('express');
+ const express = require('express');
 const router = express.Router();
 const supabase = require('../config/supabase');
 
+// صفحة الدكتور العامة
 router.get('/doctor/:doctorId', async (req, res) => {
   try {
     const { doctorId } = req.params;
@@ -20,6 +21,7 @@ router.get('/doctor/:doctorId', async (req, res) => {
   }
 });
 
+// حجز موعد
 router.post('/book-visit', async (req, res) => {
   try {
     const { doctor_id, patient_name, patient_phone, visit_date, visit_time, notes } = req.body;
@@ -30,12 +32,25 @@ router.post('/book-visit', async (req, res) => {
 
     const { data, error } = await supabase
       .from('patient_visits')
-      .insert([{ doctor_id, patient_name, patient_phone, visit_date, visit_time, notes, status: 'pending' }])
+      .insert([{
+        doctor_id,
+        patient_name,
+        patient_phone,
+        visit_date,
+        visit_time,
+        notes,
+        status: 'pending'
+      }])
       .select()
       .single();
 
     if (error) throw error;
-    res.status(201).json({ success: true, message: 'Visit booked successfully!', visit: data });
+
+    res.status(201).json({
+      success: true,
+      message: 'Visit booked successfully!',
+      visit: data
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

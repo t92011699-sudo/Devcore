@@ -2,11 +2,11 @@
 
 const DEFAULT_DOCTOR_ID = '5b075375-0b21-4e67-91c8-1ab2c709fa85';
 
-// ============== جلب كل المرضى ==============
+// ===== جلب كل المرضى =====
 const getPatients = async (req, res) => {
   try {
     const doctorId = req.query.doctor_id || DEFAULT_DOCTOR_ID;
-    const { status } = req.query; // ← جديد: فلتر حسب الحالة
+    const { status } = req.query;
 
     let query = supabase
       .from('patients')
@@ -14,7 +14,6 @@ const getPatients = async (req, res) => {
       .eq('doctor_id', doctorId)
       .order('created_at', { ascending: false });
 
-    // فلتر حسب الحالة
     if (status) {
       query = query.eq('status', status);
     }
@@ -23,7 +22,6 @@ const getPatients = async (req, res) => {
 
     if (error) throw error;
 
-    // إحصائيات الحالات
     const pending = data.filter(p => p.status === 'pending').length;
     const complete = data.filter(p => p.status === 'complete').length;
 
@@ -41,7 +39,7 @@ const getPatients = async (req, res) => {
   }
 };
 
-// ============== إضافة مريض جديد ==============
+// ===== إضافة مريض =====
 const addPatient = async (req, res) => {
   try {
     const doctorId = req.body.doctor_id || DEFAULT_DOCTOR_ID;
@@ -61,12 +59,13 @@ const addPatient = async (req, res) => {
         age,
         gender,
         notes,
-        status: status || 'pending' // ← جديد
+        status: status || 'pending'
       }])
       .select()
       .single();
 
     if (error) throw error;
+
     res.status(201).json({
       success: true,
       message: 'Patient added',
@@ -77,7 +76,7 @@ const addPatient = async (req, res) => {
   }
 };
 
-// ============== تحديث مريض ==============
+// ===== تحديث مريض =====
 const updatePatient = async (req, res) => {
   try {
     const { id } = req.params;
@@ -85,20 +84,13 @@ const updatePatient = async (req, res) => {
 
     const { data, error } = await supabase
       .from('patients')
-      .update({
-        name,
-        phone,
-        email,
-        age,
-        gender,
-        notes,
-        status // ← جديد
-      })
+      .update({ name, phone, email, age, gender, notes, status })
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
+
     res.json({
       success: true,
       message: 'Patient updated',
@@ -109,7 +101,7 @@ const updatePatient = async (req, res) => {
   }
 };
 
-// ============== تحديث حالة المريض فقط ==============
+// ===== تحديث حالة المريض =====
 const updatePatientStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -131,13 +123,6 @@ const updatePatientStatus = async (req, res) => {
 
     if (error) throw error;
 
-    if (!data) {
-      return res.status(404).json({
-        success: false,
-        error: 'Patient not found'
-      });
-    }
-
     res.json({
       success: true,
       message: `Patient status updated to ${status}`,
@@ -148,7 +133,7 @@ const updatePatientStatus = async (req, res) => {
   }
 };
 
-// ============== حذف مريض ==============
+// ===== حذف مريض =====
 const deletePatient = async (req, res) => {
   try {
     const { id } = req.params;
@@ -164,6 +149,6 @@ module.exports = {
   getPatients,
   addPatient,
   updatePatient,
-  updatePatientStatus, // ← جديد
+  updatePatientStatus,
   deletePatient
 };

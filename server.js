@@ -10,23 +10,19 @@ const chatRoutes = require('./routes/chatRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/chat', chatRoutes); // ✅ Chat routes
 
-// Home
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: '🏥 Clinic API is running with Chat',
-    version: '1.0.0',
+    message: '🏥 Clinic API with Chat',
     test_account: {
       email: 'ahmed@clinic.com',
       password: '123456'
@@ -34,16 +30,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    success: true,
-    status: 'healthy',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({

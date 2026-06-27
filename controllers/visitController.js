@@ -1,4 +1,4 @@
-const supabase = require('../config/supabase');
+ const supabase = require('../config/supabase');
 
 // جلب الحجوزات
 const getVisits = async (req, res) => {

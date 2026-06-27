@@ -232,7 +232,7 @@ const getChatRoom = async (req, res) => {
 };
 
 // ==============================================
-// 4. إرسال رسالة (مع استخراج الاسم والرقم من أي رسالة)
+// 4. إرسال رسالة (مع استخراج الاسم والرقم - بدون حجز)
 // ==============================================
 const sendMessage = async (req, res) => {
   try {
@@ -254,12 +254,14 @@ const sendMessage = async (req, res) => {
       .single();
 
     if (roomError || !room) {
+      console.error('❌ Room error:', roomError);
       return res.status(404).json({
         success: false,
         error: 'Chat room not found'
       });
     }
 
+    // تحديد sender_id
     let finalSenderId = senderId;
     if (!finalSenderId) {
       if (senderType === 'doctor') {
@@ -272,6 +274,7 @@ const sendMessage = async (req, res) => {
       finalSenderId = senderType === 'doctor' ? 'doctor-123' : 'patient-456';
     }
 
+    // حفظ الرسالة
     const { data: savedMessage, error: msgError } = await supabase
       .from('messages')
       .insert([{
@@ -300,52 +303,30 @@ const sendMessage = async (req, res) => {
       .eq('id', roomId);
 
     // ==========================================
-    // 🔍 استخراج الاسم والرقم من أي رسالة (بدون كلمات مفتاحية)
+    // 🔍 استخراج الاسم والرقم من الرسالة
     // ==========================================
     const cleanMessage = message.trim();
-    
-    // 1. استخراج الرقم (أول رقم بيبدأ بـ 01 ويتكون من 11 رقم)
     const phoneMatch = cleanMessage.match(/(01\d{9})/);
+    const nameMatch = cleanMessage.match(/اسمي\s+([^\d]+)/i) || 
+                      cleanMessage.match(/الاسم\s+([^\d]+)/i) ||
+                      cleanMessage.match(/أنا\s+([^\d]+)/i);
+
+    let patientName = null;
     let patientPhone = null;
+
+    if (nameMatch && nameMatch[1]) {
+      patientName = nameMatch[1]
+        .replace(/\d/g, '')
+        .replace(/رقم\s*:/i, '')
+        .replace(/تلفون\s*:/i, '')
+        .trim();
+    }
     if (phoneMatch && phoneMatch[1]) {
       patientPhone = phoneMatch[1].trim();
     }
 
-    // 2. استخراج الاسم (كل الكلمات قبل الرقم)
-    let patientName = null;
-    if (phoneMatch) {
-      const textBeforePhone = cleanMessage.substring(0, phoneMatch.index).trim();
-      if (textBeforePhone) {
-        patientName = textBeforePhone
-          .replace(/^(اسمي|الاسم|أنا|اسمى|اسم)\s*/i, '')
-          .replace(/رقم\s*/i, '')
-          .replace(/تلفون\s*/i, '')
-          .replace(/phone\s*/i, '')
-          .trim();
-      }
-    }
-
-    // لو مفيش اسم قبل الرقم، خد أول 3 كلمات من الرسالة
-    if (!patientName && cleanMessage) {
-      const words = cleanMessage.split(/\s+/);
-      if (words.length >= 2) {
-        patientName = words.slice(0, 3).join(' ').trim();
-      } else if (words.length === 1) {
-        patientName = words[0].trim();
-      }
-    }
-
-    // لو الاسم لسه فاضي، استخدم "مريض"
-    if (!patientName) {
-      patientName = 'مريض';
-    }
-
-    if (patientName && patientName.length > 50) {
-      patientName = patientName.substring(0, 50);
-    }
-
     // ==========================================
-    // 📝 لو لقينا الاسم والرقم والمُرسِل مريض
+    // 📝 تحديث بيانات المريض (من غير حجز)
     // ==========================================
     if (patientName && patientPhone && senderType === 'patient') {
       
@@ -366,41 +347,12 @@ const sendMessage = async (req, res) => {
           phone: patientPhone
         })
         .eq('id', room.patient_id);
-
-      // ✅ إنشاء حجز (Visit) في جدول patient_visits
-      const today = new Date().toISOString().split('T')[0];
-      const now = new Date().toTimeString().split(' ')[0].slice(0, 5);
-
-      const { data: visitData, error: visitError } = await supabase
-        .from('patient_visits')
-        .insert([{
-          doctor_id: room.doctor_id,
-          patient_name: patientName,
-          patient_phone: patientPhone,
-          visit_date: today,
-          visit_time: now,
-          status: 'pending',
-          notes: `تم الحجز عبر الشات - ${message}`
-        }])
-        .select()
-        .single();
-
-      if (visitError) {
-        console.error('❌ Visit creation error:', visitError);
-      } else {
-        console.log('✅ Visit created:', visitData);
-      }
     }
 
     res.status(201).json({
       success: true,
       message: 'Message sent successfully',
-      data: savedMessage,
-      extracted: {
-        name: patientName,
-        phone: patientPhone
-      },
-      visit_created: !!(patientName && patientPhone && senderType === 'patient')
+      data: savedMessage
     });
 
   } catch (error) {

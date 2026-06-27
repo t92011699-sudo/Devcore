@@ -1,9 +1,9 @@
  <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>💬 تجربة الشات</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>💬 نظام الشات - المريض والدكتور</title>
     <style>
         * {
             margin: 0;
@@ -19,37 +19,72 @@
             min-height: 100vh;
             padding: 20px;
         }
-        .chat-container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        .app {
+            max-width: 1200px;
             width: 100%;
-            max-width: 500px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             overflow: hidden;
         }
-        .chat-header {
+        .tabs {
+            display: flex;
+            background: #e8edf3;
+            border-bottom: 2px solid #d0d7e2;
+        }
+        .tabs button {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            background: transparent;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        .tabs button.active {
+            background: white;
+            border-bottom-color: #2c6b9e;
+            color: #2c6b9e;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ===== المريض ===== */
+        .patient-container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .patient-header {
             background: #2c6b9e;
             color: white;
             padding: 18px 24px;
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
+            border-radius: 16px;
+            margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .chat-header .status {
-            font-size: 12px;
+        .patient-header .status {
+            font-size: 14px;
             background: rgba(255,255,255,0.2);
-            padding: 4px 12px;
+            padding: 4px 14px;
             border-radius: 20px;
         }
-        .chat-messages {
-            height: 400px;
+        .patient-messages {
+            height: 380px;
             overflow-y: auto;
-            padding: 16px;
             background: #fafbfc;
-            border-bottom: 1px solid #eee;
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid #e0e4e8;
+            margin-bottom: 12px;
         }
         .message {
             margin: 8px 0;
@@ -92,13 +127,11 @@
             opacity: 0.5;
             margin-top: 4px;
         }
-        .chat-input {
+        .patient-input {
             display: flex;
-            padding: 12px 16px;
             gap: 10px;
-            background: white;
         }
-        .chat-input input {
+        .patient-input input {
             flex: 1;
             padding: 10px 14px;
             border: 2px solid #e0e4e8;
@@ -107,10 +140,10 @@
             outline: none;
             transition: 0.3s;
         }
-        .chat-input input:focus {
+        .patient-input input:focus {
             border-color: #2c6b9e;
         }
-        .chat-input button {
+        .patient-input button {
             padding: 10px 20px;
             border: none;
             border-radius: 12px;
@@ -118,45 +151,22 @@
             color: white;
             font-weight: bold;
             cursor: pointer;
-            transition: 0.3s;
         }
-        .chat-input button:hover {
-            background: #1a4f7a;
-        }
-        .chat-input button:disabled {
+        .patient-input button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        .room-info {
-            padding: 12px 16px;
-            background: #e8edf3;
-            font-size: 13px;
-            color: #555;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ddd;
-        }
-        .room-info .room-id {
-            font-weight: bold;
-            color: #2c6b9e;
-            font-size: 12px;
-        }
-        .typing-indicator {
+        .typing-hint {
             font-size: 13px;
             color: #888;
-            padding: 4px 16px;
             min-height: 24px;
+            padding: 4px 0;
             font-style: italic;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
         .form-container {
-            padding: 20px;
-            background: #f8f9fc;
+            padding: 16px 0;
             border-bottom: 1px solid #eee;
+            margin-bottom: 16px;
         }
         .form-container input {
             width: 100%;
@@ -187,280 +197,522 @@
         .hidden {
             display: none !important;
         }
+        .room-info {
+            padding: 12px 16px;
+            background: #e8edf3;
+            border-radius: 12px;
+            font-size: 13px;
+            color: #555;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .room-info .room-id {
+            font-weight: bold;
+            color: #2c6b9e;
+            font-size: 12px;
+        }
         .chat-footer {
             display: flex;
             justify-content: space-between;
-            padding: 6px 16px;
-            background: #f8f9fc;
+            padding: 6px 0;
             font-size: 12px;
             color: #999;
-            border-top: 1px solid #eee;
+        }
+
+        /* ===== الدكتور ===== */
+        .doctor-dashboard {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .doctor-sidebar {
+            flex: 0 0 320px;
+            background: #f8f9fc;
+            border-radius: 16px;
+            padding: 16px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #e0e4e8;
+        }
+        .doctor-sidebar h3 {
+            margin-bottom: 12px;
+            font-size: 16px;
+            color: #333;
+        }
+        .room-item {
+            padding: 12px;
+            border-radius: 12px;
+            background: white;
+            margin-bottom: 8px;
+            border: 1px solid #e8edf3;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .room-item:hover {
+            border-color: #2c6b9e;
+        }
+        .room-item.active {
+            border-color: #2c6b9e;
+            background: #eaf2fa;
+        }
+        .room-item .name {
+            font-weight: bold;
+            font-size: 15px;
+        }
+        .room-item .phone {
+            font-size: 13px;
+            color: #666;
+        }
+        .room-item .guest {
+            color: #ff8c00;
+            font-size: 12px;
+        }
+        .room-item .unread {
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 0 8px;
+            font-size: 11px;
+            margin-right: 6px;
+        }
+        .room-item .last-msg {
+            font-size: 13px;
+            color: #555;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .room-item .time {
+            font-size: 11px;
+            color: #999;
+        }
+        .doctor-chat-area {
+            flex: 1;
+            min-width: 300px;
+            border: 1px solid #e0e4e8;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 600px;
+        }
+        .doctor-chat-header {
+            background: #2c6b9e;
+            color: white;
+            padding: 14px 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        .doctor-chat-header small {
+            font-weight: normal;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .doctor-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: #fafbfc;
+            min-height: 300px;
+            max-height: 400px;
+        }
+        .doctor-input-area {
+            display: flex;
+            padding: 12px 16px;
+            gap: 10px;
+            border-top: 1px solid #e0e4e8;
+            background: white;
+        }
+        .doctor-input-area input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            outline: none;
+        }
+        .doctor-input-area button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            background: #2c6b9e;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .doctor-input-area button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .no-room-selected {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #999;
+            font-size: 18px;
+        }
+        .refresh-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: #2c6b9e;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .refresh-btn:hover {
+            background: #1a4f7a;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
 <body>
 
-<div class="chat-container" id="app">
-    <!-- Header -->
-    <div class="chat-header">
-        <span>💬 الشات</span>
-        <span class="status" id="status">⏳ جاري الاتصال...</span>
-    </div>
+    <div class="app">
+        <div class="tabs">
+            <button class="active" onclick="switchTab('patient')">🧑‍⚕️ شات المريض</button>
+            <button onclick="switchTab('doctor')">👨‍⚕️ Dashboard الدكتور</button>
+        </div>
 
-    <!-- Form (اسم ورقم) -->
-    <div class="form-container" id="formContainer">
-        <input type="text" id="patientName" placeholder="👤 الاسم الكامل" value="يوسف">
-        <input type="text" id="patientPhone" placeholder="📱 رقم التليفون" value="01011150572">
-        <button onclick="createRoom()">🚀 بدء المحادثة</button>
-    </div>
+        <!-- ===================== PATIENT TAB ===================== -->
+        <div id="tab-patient" class="tab-content active">
+            <div class="patient-container">
+                <div class="patient-header">
+                    <span>💬 الشات</span>
+                    <span class="status" id="patientStatus">⏳ جاري الاتصال...</span>
+                </div>
 
-    <!-- Room Info -->
-    <div class="room-info hidden" id="roomInfo">
-        <span>📌 الغرفة: <span class="room-id" id="roomIdDisplay">-</span></span>
-        <span>👤 <span id="patientNameDisplay">-</span></span>
-    </div>
+                <div class="form-container" id="formContainer">
+                    <input type="text" id="patientName" placeholder="👤 الاسم الكامل" value="يوسف">
+                    <input type="text" id="patientPhone" placeholder="📱 رقم التليفون" value="01011150572">
+                    <button onclick="createRoom()">🚀 بدء المحادثة</button>
+                </div>
 
-    <!-- Messages -->
-    <div class="chat-messages" id="messages">
-        <div style="text-align:center;color:#999;padding:40px 0;font-size:14px;">
-            📌 أدخل اسمك ورقمك ثم اضغط "بدء المحادثة"
+                <div class="room-info hidden" id="roomInfo">
+                    <span>📌 الغرفة: <span class="room-id" id="roomIdDisplay">-</span></span>
+                    <span>👤 <span id="patientNameDisplay">-</span></span>
+                </div>
+
+                <div class="patient-messages" id="patientMessages">
+                    <div style="text-align:center;color:#999;padding:40px 0;font-size:14px;">
+                        📌 أدخل اسمك ورقمك ثم اضغط "بدء المحادثة"
+                    </div>
+                </div>
+
+                <div class="typing-hint" id="typingHint"></div>
+
+                <div class="patient-input hidden" id="patientInput">
+                    <input type="text" id="patientMsgInput" placeholder="اكتب رسالتك..." onkeypress="if(event.key==='Enter') sendPatientMessage()">
+                    <button id="patientSendBtn" onclick="sendPatientMessage()" disabled>📤 إرسال</button>
+                </div>
+
+                <div class="chat-footer">
+                    <span id="patientConnectionStatus">🔴 غير متصل</span>
+                    <span id="patientMsgCount">0 رسائل</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== DOCTOR TAB ===================== -->
+        <div id="tab-doctor" class="tab-content">
+            <div class="doctor-dashboard">
+                <div class="doctor-sidebar">
+                    <h3>📋 قائمة المحادثات</h3>
+                    <div id="roomsList">
+                        <div style="color:#999;text-align:center;padding:20px;">جاري تحميل المحادثات...</div>
+                    </div>
+                    <button class="refresh-btn" onclick="refreshRooms()">🔄 تحديث</button>
+                </div>
+                <div class="doctor-chat-area">
+                    <div class="doctor-chat-header" id="doctorChatHeader">
+                        💬 المحادثة
+                        <small id="doctorRoomName">اختر محادثة من القائمة</small>
+                    </div>
+                    <div class="doctor-messages" id="doctorMessages">
+                        <div class="no-room-selected">👈 اختر محادثة من القائمة لعرض الرسائل</div>
+                    </div>
+                    <div class="doctor-input-area">
+                        <input type="text" id="doctorMsgInput" placeholder="اكتب ردك..." onkeypress="if(event.key==='Enter') sendDoctorMessage()" disabled>
+                        <button id="doctorSendBtn" onclick="sendDoctorMessage()" disabled>📤 إرسال</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Typing -->
-    <div class="typing-indicator" id="typingIndicator"></div>
+    <script>
+        // ============================================================
+        // 🔧 الإعدادات
+        // ============================================================
+        const API_BASE = 'https://devcore-fawn.vercel.app';
+        const DOCTOR_ID = '5b075375-0b21-4e67-91c8-1ab2c709fa85';
 
-    <!-- Input -->
-    <div class="chat-input hidden" id="chatInput">
-        <input type="text" id="messageInput" placeholder="اكتب رسالتك..." onkeypress="if(event.key==='Enter') sendMessage()">
-        <button id="sendBtn" onclick="sendMessage()">📤 إرسال</button>
-    </div>
+        // ============================================================
+        // 📌 PATIENT SIDE
+        // ============================================================
+        let currentRoomId = '';
+        let patientName = '';
+        let patientPhone = '';
+        let patientPolling = null;
+        let patientMsgCount = 0;
 
-    <!-- Footer -->
-    <div class="chat-footer">
-        <span id="connectionStatus">🔴 غير متصل</span>
-        <span id="messageCount">0 رسائل</span>
-    </div>
-</div>
+        const patientMessagesDiv = document.getElementById('patientMessages');
+        const patientMsgInput = document.getElementById('patientMsgInput');
+        const patientSendBtn = document.getElementById('patientSendBtn');
+        const patientStatus = document.getElementById('patientStatus');
+        const roomIdDisplay = document.getElementById('roomIdDisplay');
+        const patientNameDisplay = document.getElementById('patientNameDisplay');
+        const roomInfo = document.getElementById('roomInfo');
+        const formContainer = document.getElementById('formContainer');
+        const patientInput = document.getElementById('patientInput');
+        const patientConnectionStatus = document.getElementById('patientConnectionStatus');
+        const patientMsgCountEl = document.getElementById('patientMsgCount');
+        const typingHint = document.getElementById('typingHint');
 
-<script>
-    // ============================================================
-    // 🔧 الإعدادات
-    // ============================================================
-    const API_BASE = 'https://devcore-fawn.vercel.app';
-    const DOCTOR_ID = '5b075375-0b21-4e67-91c8-1ab2c709fa85';
-
-    // ============================================================
-    // 📌 المتغيرات
-    // ============================================================
-    let currentRoomId = '';
-    let patientName = '';
-    let patientPhone = '';
-    let pollingInterval = null;
-    let lastMessageCount = 0;
-
-    // ============================================================
-    // 📌 عناصر DOM
-    // ============================================================
-    const messagesDiv = document.getElementById('messages');
-    const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const statusEl = document.getElementById('status');
-    const roomIdDisplay = document.getElementById('roomIdDisplay');
-    const patientNameDisplay = document.getElementById('patientNameDisplay');
-    const roomInfo = document.getElementById('roomInfo');
-    const chatInput = document.getElementById('chatInput');
-    const formContainer = document.getElementById('formContainer');
-    const connectionStatus = document.getElementById('connectionStatus');
-    const messageCount = document.getElementById('messageCount');
-    const typingIndicator = document.getElementById('typingIndicator');
-
-    // ============================================================
-    // 📌 دوال مساعدة
-    // ============================================================
-    function addMessage(senderType, message, alignment) {
-        const div = document.createElement('div');
-        
-        // تحديد الكلاس حسب alignment
-        if (alignment === 'left') {
-            div.className = 'message message-left';
-        } else if (alignment === 'right') {
-            div.className = 'message message-right';
-        } else {
-            div.className = 'message message-system';
+        function addPatientMessage(senderType, message, alignment) {
+            const div = document.createElement('div');
+            const cls = alignment === 'left' ? 'message-left' : alignment === 'right' ? 'message-right' : 'message-system';
+            div.className = `message ${cls}`;
+            const senderName = senderType === 'patient' ? '🧑‍⚕️ مريض' :
+                senderType === 'system' ? '🤖 النظام' : '👨‍⚕️ دكتور';
+            div.innerHTML = `
+                <div class="sender">${senderName}</div>
+                <div>${message}</div>
+                <div class="time">${new Date().toLocaleTimeString()}</div>
+            `;
+            patientMessagesDiv.appendChild(div);
+            patientMessagesDiv.scrollTop = patientMessagesDiv.scrollHeight;
+            patientMsgCount++;
+            patientMsgCountEl.textContent = `${patientMsgCount} رسائل`;
         }
 
-        // اسم المرسل
-        const senderName = senderType === 'patient' ? '🧑‍⚕️ مريض' : 
-                          senderType === 'system' ? '🤖 النظام' : '👨‍⚕️ دكتور';
-        div.innerHTML = `
-            <div class="sender">${senderName}</div>
-            <div>${message}</div>
-            <div class="time">${new Date().toLocaleTimeString()}</div>
-        `;
-        
-        messagesDiv.appendChild(div);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        lastMessageCount++;
-        messageCount.textContent = `${lastMessageCount} رسائل`;
-    }
-
-    function setStatus(connected) {
-        statusEl.textContent = connected ? '✅ متصل' : '❌ غير متصل';
-        connectionStatus.textContent = connected ? '🟢 متصل' : '🔴 غير متصل';
-        sendBtn.disabled = !connected || !currentRoomId;
-    }
-
-    function showRoomInfo(roomId, name) {
-        roomInfo.classList.remove('hidden');
-        roomIdDisplay.textContent = roomId;
-        patientNameDisplay.textContent = name;
-    }
-
-    function showChatInput(show) {
-        if (show) {
-            chatInput.classList.remove('hidden');
-            sendBtn.disabled = false;
-        } else {
-            chatInput.classList.add('hidden');
-            sendBtn.disabled = true;
-        }
-    }
-
-    // ============================================================
-    // 📌 إنشاء المحادثة
-    // ============================================================
-    async function createRoom() {
-        const name = document.getElementById('patientName').value.trim();
-        const phone = document.getElementById('patientPhone').value.trim();
-
-        if (!name || !phone) {
-            alert('⚠️ يرجى إدخال الاسم ورقم التليفون');
-            return;
+        function setPatientStatus(connected) {
+            patientStatus.textContent = connected ? '✅ متصل' : '❌ غير متصل';
+            patientConnectionStatus.textContent = connected ? '🟢 متصل' : '🔴 غير متصل';
+            patientSendBtn.disabled = !connected || !currentRoomId;
         }
 
-        patientName = name;
-        patientPhone = phone;
+        function showPatientRoomInfo(roomId, name) {
+            roomInfo.classList.remove('hidden');
+            roomIdDisplay.textContent = roomId;
+            patientNameDisplay.textContent = name;
+        }
 
-        try {
-            const res = await fetch(`${API_BASE}/api/chat/rooms`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    doctor_id: DOCTOR_ID,
-                    patient_name: name,
-                    patient_phone: phone
-                })
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-                currentRoomId = data.room.id;
-                formContainer.classList.add('hidden');
-                showRoomInfo(currentRoomId, patientName);
-                showChatInput(true);
-                setStatus(true);
-
-                // عرض الرسالة الترحيبية (من الـ Response)
-                if (data.autoMessage) {
-                    addMessage('system', data.autoMessage, 'right');
-                }
-
-                // بدء الـ Polling
-                startPolling();
-
-                // تحديث العداد
-                messageCount.textContent = '0 رسائل';
+        function showPatientInput(show) {
+            if (show) {
+                patientInput.classList.remove('hidden');
+                patientSendBtn.disabled = false;
             } else {
-                alert('❌ فشل إنشاء المحادثة: ' + (data.error || 'خطأ غير معروف'));
+                patientInput.classList.add('hidden');
+                patientSendBtn.disabled = true;
             }
-        } catch (e) {
-            alert('❌ خطأ في الاتصال: ' + e.message);
         }
-    }
 
-    // ============================================================
-    // 📌 Polling (جلب الرسائل)
-    // ============================================================
-    function startPolling() {
-        if (pollingInterval) clearInterval(pollingInterval);
-        fetchMessages();
-        pollingInterval = setInterval(fetchMessages, 3000);
-    }
+        async function createRoom() {
+            const name = document.getElementById('patientName').value.trim();
+            const phone = document.getElementById('patientPhone').value.trim();
+            if (!name || !phone) { alert('⚠️ يرجى إدخال الاسم ورقم التليفون'); return; }
+            patientName = name;
+            patientPhone = phone;
+            try {
+                const res = await fetch(`${API_BASE}/api/chat/rooms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ doctor_id: DOCTOR_ID, patient_name: name, patient_phone: phone })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentRoomId = data.room.id;
+                    formContainer.classList.add('hidden');
+                    showPatientRoomInfo(currentRoomId, patientName);
+                    showPatientInput(true);
+                    setPatientStatus(true);
+                    if (data.autoMessage) {
+                        addPatientMessage('system', data.autoMessage, 'right');
+                    }
+                    startPatientPolling();
+                    patientMsgCountEl.textContent = '0 رسائل';
+                } else {
+                    alert('❌ فشل إنشاء المحادثة: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (e) { alert('❌ خطأ في الاتصال: ' + e.message); }
+        }
 
-    async function fetchMessages() {
-        if (!currentRoomId) return;
+        function startPatientPolling() {
+            if (patientPolling) clearInterval(patientPolling);
+            fetchPatientMessages();
+            patientPolling = setInterval(fetchPatientMessages, 3000);
+        }
 
-        try {
-            const res = await fetch(`${API_BASE}/api/chat/rooms/${currentRoomId}`);
-            const data = await res.json();
+        async function fetchPatientMessages() {
+            if (!currentRoomId) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/chat/rooms/${currentRoomId}`);
+                const data = await res.json();
+                if (data.success && data.room) {
+                    const messages = data.room.messages || [];
+                    const currentCount = patientMessagesDiv.querySelectorAll('.message').length;
+                    if (messages.length > currentCount) {
+                        const newMsgs = messages.slice(currentCount);
+                        newMsgs.forEach(msg => {
+                            const alignment = msg.alignment || (msg.sender_type === 'patient' ? 'left' : 'right');
+                            addPatientMessage(msg.sender_type, msg.message, alignment);
+                        });
+                    }
+                    if (data.room.patient_name && data.room.patient_name !== patientName) {
+                        patientName = data.room.patient_name;
+                        patientNameDisplay.textContent = patientName;
+                    }
+                }
+            } catch (e) { console.error('Polling error:', e); }
+        }
 
-            if (data.success && data.room) {
-                const messages = data.room.messages || [];
-                
-                // عدد الرسائل الحالية في DOM
-                const currentCount = messagesDiv.querySelectorAll('.message').length;
-                
-                if (messages.length > currentCount) {
-                    // عرض الرسائل الجديدة فقط
-                    const newMessages = messages.slice(currentCount);
-                    newMessages.forEach(msg => {
-                        const alignment = msg.alignment || (msg.sender_type === 'patient' ? 'left' : 'right');
-                        addMessage(msg.sender_type, msg.message, alignment);
+        async function sendPatientMessage() {
+            const msg = patientMsgInput.value.trim();
+            if (!msg || !currentRoomId) return;
+            try {
+                await fetch(`${API_BASE}/api/chat/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomId: currentRoomId, senderType: 'patient', message: msg })
+                });
+                addPatientMessage('patient', msg, 'left');
+                patientMsgInput.value = '';
+                await fetchPatientMessages();
+            } catch (e) { alert('❌ فشل إرسال الرسالة: ' + e.message); }
+        }
+
+        // ============================================================
+        // 📌 DOCTOR SIDE
+        // ============================================================
+        let doctorCurrentRoomId = '';
+        let doctorPolling = null;
+
+        const roomsList = document.getElementById('roomsList');
+        const doctorMessagesDiv = document.getElementById('doctorMessages');
+        const doctorMsgInput = document.getElementById('doctorMsgInput');
+        const doctorSendBtn = document.getElementById('doctorSendBtn');
+        const doctorRoomName = document.getElementById('doctorRoomName');
+
+        async function refreshRooms() {
+            try {
+                const res = await fetch(`${API_BASE}/api/chat/rooms`);
+                const data = await res.json();
+                if (!data.success || !data.rooms || data.rooms.length === 0) {
+                    roomsList.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">لا توجد محادثات</div>';
+                    return;
+                }
+                roomsList.innerHTML = '';
+                data.rooms.forEach(room => {
+                    const div = document.createElement('div');
+                    div.className = 'room-item' + (room.id === doctorCurrentRoomId ? ' active' : '');
+                    const unread = room.unread_count > 0 ? `<span class="unread">${room.unread_count}</span>` : '';
+                    const guest = room.patient_name === 'Guest' ? '<span class="guest"> 🟡 ضيف</span>' : '';
+                    div.innerHTML = `
+                        <div class="name">${room.patient_name || 'Guest'} ${guest} ${unread}</div>
+                        <div class="phone">📱 ${room.patient_phone || 'غير معروف'}</div>
+                        <div class="last-msg">${room.last_message ? room.last_message.message : 'لا توجد رسائل'}</div>
+                        <div class="time">${new Date(room.updated_at).toLocaleString()}</div>
+                    `;
+                    div.onclick = () => selectDoctorRoom(room.id);
+                    roomsList.appendChild(div);
+                });
+            } catch (e) {
+                roomsList.innerHTML = '<div style="color:#dc3545;text-align:center;padding:20px;">❌ خطأ في التحميل</div>';
+            }
+        }
+
+        function selectDoctorRoom(roomId) {
+            if (doctorPolling) clearInterval(doctorPolling);
+            doctorCurrentRoomId = roomId;
+            doctorRoomName.textContent = `الغرفة: ${roomId}`;
+            doctorMessagesDiv.innerHTML = '';
+            doctorMsgInput.disabled = false;
+            doctorSendBtn.disabled = false;
+            fetchDoctorMessages();
+            doctorPolling = setInterval(fetchDoctorMessages, 3000);
+            refreshRooms();
+        }
+
+        async function fetchDoctorMessages() {
+            if (!doctorCurrentRoomId) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/chat/rooms/${doctorCurrentRoomId}`);
+                const data = await res.json();
+                if (data.success && data.room) {
+                    const msgs = data.room.messages || [];
+                    doctorMessagesDiv.innerHTML = '';
+                    msgs.forEach(m => {
+                        const div = document.createElement('div');
+                        const cls = m.alignment === 'left' ? 'message-left' : m.alignment === 'right' ? 'message-right' :
+                        'message-system';
+                        div.className = `message ${cls}`;
+                        const sender = m.sender_type === 'patient' ? '🧑‍⚕️ مريض' :
+                            m.sender_type === 'system' ? '🤖 النظام' : '👨‍⚕️ دكتور';
+                        div.innerHTML = `
+                            <div class="sender">${sender}</div>
+                            <div>${m.message}</div>
+                            <div class="time">${new Date(m.created_at).toLocaleTimeString()}</div>
+                        `;
+                        doctorMessagesDiv.appendChild(div);
                     });
+                    doctorMessagesDiv.scrollTop = doctorMessagesDiv.scrollHeight;
+                    refreshRooms();
                 }
-
-                // تحديث اسم المريض لو اتغير
-                if (data.room.patient_name && data.room.patient_name !== patientName) {
-                    patientName = data.room.patient_name;
-                    patientNameDisplay.textContent = patientName;
-                }
-            }
-        } catch (e) {
-            console.error('Polling error:', e);
+            } catch (e) { console.error('Doctor polling error:', e); }
         }
-    }
 
-    // ============================================================
-    // 📌 إرسال رسالة
-    // ============================================================
-    async function sendMessage() {
-        const message = messageInput.value.trim();
-        if (!message || !currentRoomId) return;
-
-        try {
-            await fetch(`${API_BASE}/api/chat/messages`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    roomId: currentRoomId,
-                    senderType: 'patient',
-                    message: message
-                })
-            });
-
-            // عرض الرسالة محلياً
-            addMessage('patient', message, 'left');
-            messageInput.value = '';
-
-            // جلب الرسائل فوراً
-            await fetchMessages();
-
-        } catch (e) {
-            alert('❌ فشل إرسال الرسالة: ' + e.message);
+        async function sendDoctorMessage() {
+            const msg = doctorMsgInput.value.trim();
+            if (!msg || !doctorCurrentRoomId) return;
+            try {
+                await fetch(`${API_BASE}/api/chat/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomId: doctorCurrentRoomId, senderType: 'doctor', message: msg })
+                });
+                doctorMsgInput.value = '';
+                await fetchDoctorMessages();
+                await refreshRooms();
+            } catch (e) { alert('❌ فشل إرسال الرسالة: ' + e.message); }
         }
-    }
 
-    // ============================================================
-    // 📌 تحميل أولي
-    // ============================================================
-    document.addEventListener('DOMContentLoaded', () => {
-        setStatus(false);
-        showChatInput(false);
-        messageCount.textContent = '0 رسائل';
-    });
-</script>
+        // ============================================================
+        // 📌 TABS
+        // ============================================================
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tabs button').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            event.target.classList.add('active');
+            if (tab === 'doctor') refreshRooms();
+        }
 
+        // ============================================================
+        // 📌 INIT
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            setPatientStatus(false);
+            showPatientInput(false);
+            patientMsgCountEl.textContent = '0 رسائل';
+            refreshRooms();
+            setInterval(refreshRooms, 10000);
+        });
+    </script>
 </body>
 </html>

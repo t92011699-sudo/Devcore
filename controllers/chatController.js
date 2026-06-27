@@ -1,4 +1,4 @@
-const supabase = require('../config/supabase');
+ const supabase = require('../config/supabase');
 
 const DEFAULT_DOCTOR_ID = '5b075375-0b21-4e67-91c8-1ab2c709fa85';
 
@@ -9,7 +9,7 @@ const createChatRoom = async (req, res) => {
   try {
     const doctorId = req.body.doctor_id || DEFAULT_DOCTOR_ID;
 
-    const { data, error } = await supabase
+    const { data: room, error: roomError } = await supabase
       .from('chat_rooms')
       .insert([{
         doctor_id: doctorId,
@@ -20,17 +20,16 @@ const createChatRoom = async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (roomError) throw roomError;
 
-    // رسالة ترحيب مثبتة من الدكتور
-    const autoMessage = `👋 مرحباً بك! 
-أنا الدكتور، يرجى إدخال اسمك الكامل ورقم التليفون الخاص بك لتأكيد الحجز.`;
+    const autoMessage = `👋 أهلاً بك! 
+نرجو أن تخبرنا باسمك ورقم تليفونك للمتابعة.`;
 
     await supabase
       .from('chat_messages')
       .insert([{
-        room_id: data.id,
-        sender_type: 'doctor',
+        room_id: room.id,
+        sender_type: 'system',
         message: autoMessage,
         is_read: false
       }]);
@@ -38,7 +37,8 @@ const createChatRoom = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Chat room created successfully',
-      room: data
+      room: room,
+      autoMessage: autoMessage
     });
 
   } catch (error) {
@@ -132,7 +132,6 @@ const getChatRoom = async (req, res) => {
       });
     }
 
-    // تحديث الرسائل غير المقروءة
     await supabase
       .from('chat_messages')
       .update({ is_read: true })
@@ -155,7 +154,7 @@ const getChatRoom = async (req, res) => {
 };
 
 // ==============================================
-// 4. إرسال رسالة
+// 4. إرسال رسالة (استخراج الاسم والرقم بأي ترتيب)
 // ==============================================
 const sendMessage = async (req, res) => {
   try {
@@ -188,30 +187,72 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    // تحديث وقت المحادثة
     await supabase
       .from('chat_rooms')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', roomId);
 
     // ==========================================
-    // 🔍 استخراج الاسم والرقم من رسالة المريض
+    // 🔍 استخراج الاسم والرقم من أي رسالة (بأي ترتيب)
     // ==========================================
     if (senderType === 'patient') {
       const cleanMessage = message.trim();
+      
+      // 1. استخراج الرقم (أول رقم يبدأ بـ 01 ويتكون من 11 رقم)
       const phoneMatch = cleanMessage.match(/(01\d{9})/);
-      const nameMatch = cleanMessage.match(/اسمي\s+([^\d]+)/i) || 
-                        cleanMessage.match(/الاسم\s+([^\d]+)/i) ||
-                        cleanMessage.match(/أنا\s+([^\d]+)/i);
-
-      let patientName = null;
       let patientPhone = null;
-
-      if (nameMatch && nameMatch[1]) {
-        patientName = nameMatch[1].replace(/\d/g, '').trim();
-      }
       if (phoneMatch && phoneMatch[1]) {
         patientPhone = phoneMatch[1].trim();
+      }
+
+      // 2. استخراج الاسم (كل الكلمات ما عدا الرقم)
+      let patientName = null;
+      
+      if (phoneMatch) {
+        // خذ كل الكلام قبل الرقم وبعده معاً
+        const textBeforePhone = cleanMessage.substring(0, phoneMatch.index).trim();
+        const textAfterPhone = cleanMessage.substring(phoneMatch.index + phoneMatch[0].length).trim();
+        
+        // اجمع النص قبل وبعد الرقم (لو موجود)
+        let fullNameText = textBeforePhone;
+        if (textAfterPhone) {
+          fullNameText = fullNameText + ' ' + textAfterPhone;
+        }
+        
+        // نظف النص من الكلمات المفتاحية
+        if (fullNameText) {
+          patientName = fullNameText
+            .replace(/^(اسمي|الاسم|أنا|اسمى|اسم)\s*/i, '') // إزالة الكلمات المفتاحية
+            .replace(/رقم\s*/i, '')                         // إزالة كلمة رقم
+            .replace(/تلفون\s*/i, '')                       // إزالة كلمة تلفون
+            .replace(/phone\s*/i, '')                       // إزالة كلمة phone
+            .replace(/متابعة\s*/i, '')                     // إزالة كلمة متابعة
+            .trim();
+        }
+      }
+
+      // لو مفيش اسم، خذ أول كلمتين من الرسالة
+      if (!patientName || patientName.length < 2) {
+        const words = cleanMessage.split(/\s+/);
+        // استبعد الكلمات المفتاحية
+        const filteredWords = words.filter(w => 
+          !['اسمي', 'الاسم', 'أنا', 'اسمى', 'اسم', 'رقم', 'تلفون', 'phone', 'متابعة'].includes(w.toLowerCase())
+        );
+        if (filteredWords.length >= 2) {
+          patientName = filteredWords.slice(0, 2).join(' ').trim();
+        } else if (filteredWords.length === 1) {
+          patientName = filteredWords[0].trim();
+        }
+      }
+
+      // لو الاسم لسه فاضي، استخدم "مريض"
+      if (!patientName || patientName.length < 1) {
+        patientName = 'مريض';
+      }
+
+      // لو الاسم طويل جداً، نختصره
+      if (patientName && patientName.length > 50) {
+        patientName = patientName.substring(0, 50);
       }
 
       // لو لقينا الاسم والرقم، نحدث المحادثة

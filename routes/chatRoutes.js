@@ -1,4 +1,4 @@
- const express = require('express');
+const express = require('express');
 const router = express.Router();
 const {
   createChatRoom,
@@ -6,8 +6,7 @@ const {
   getChatRoom,
   sendMessage,
   updateChatRoomStatus,
-  deleteChatRoom,
-  updatePatientFromChat
+  deleteChatRoom
 } = require('../controllers/chatController');
 
 // ===== Chat Rooms =====
@@ -19,8 +18,5 @@ router.delete('/rooms/:roomId', deleteChatRoom);
 
 // ===== Chat Messages =====
 router.post('/messages', sendMessage);
-
-// ===== Update Patient =====
-router.put('/rooms/:roomId/patient', updatePatientFromChat);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-const express = require('express');
+ const express = require('express');
 const router = express.Router();
 const {
   createChatRoom,
@@ -10,7 +10,7 @@ const {
 } = require('../controllers/chatController');
 
 // ===== Chat Rooms =====
-router.post('/rooms', createChatRoom);
+router.post('/rooms', createChatRoom);  // الآن يستقبل patient_name و patient_phone
 router.get('/rooms', getChatRooms);
 router.get('/rooms/:roomId', getChatRoom);
 router.put('/rooms/:roomId/status', updateChatRoomStatus);

@@ -3,20 +3,28 @@
 const DEFAULT_DOCTOR_ID = '5b075375-0b21-4e67-91c8-1ab2c709fa85';
 
 // ==============================================
-// 1. إنشاء محادثة جديدة
+// 1. إنشاء محادثة جديدة (مع اسم ورقم من الفورم)
 // ==============================================
 const createChatRoom = async (req, res) => {
   try {
     const doctorId = req.body.doctor_id || DEFAULT_DOCTOR_ID;
+    const { patient_name, patient_phone } = req.body;
 
-    console.log('📥 Creating chat room for doctor:', doctorId);
+    if (!patient_name || !patient_phone) {
+      return res.status(400).json({
+        success: false,
+        error: 'Patient name and phone are required'
+      });
+    }
+
+    console.log('📥 Creating chat room for:', { patient_name, patient_phone });
 
     const { data: room, error: roomError } = await supabase
       .from('chat_rooms')
       .insert([{
         doctor_id: doctorId,
-        patient_name: 'Guest',
-        patient_phone: null,
+        patient_name: patient_name,
+        patient_phone: patient_phone,
         status: 'active'
       }])
       .select()
@@ -29,8 +37,8 @@ const createChatRoom = async (req, res) => {
 
     console.log('✅ Room created:', room.id);
 
-    const autoMessage = `👋 أهلاً بك! 
-نرجو أن تخبرنا باسمك ورقم تليفونك للمتابعة.`;
+    const autoMessage = `👋 أهلاً بك يا ${patient_name}! 
+نرحب بك في عيادتنا، سنتواصل معك قريباً للمتابعة.`;
 
     const { data: messageData, error: msgError } = await supabase
       .from('chat_messages')
@@ -208,65 +216,6 @@ const sendMessage = async (req, res) => {
       .from('chat_rooms')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', roomId);
-
-    // استخراج الاسم والرقم
-    if (senderType === 'patient') {
-      const cleanMessage = message.trim();
-      const phoneMatch = cleanMessage.match(/(01\d{9})/);
-      let patientPhone = null;
-      if (phoneMatch && phoneMatch[1]) {
-        patientPhone = phoneMatch[1].trim();
-      }
-
-      let patientName = null;
-      if (phoneMatch) {
-        const textBeforePhone = cleanMessage.substring(0, phoneMatch.index).trim();
-        const textAfterPhone = cleanMessage.substring(phoneMatch.index + phoneMatch[0].length).trim();
-        let fullNameText = textBeforePhone;
-        if (textAfterPhone) {
-          fullNameText = fullNameText + ' ' + textAfterPhone;
-        }
-        if (fullNameText) {
-          patientName = fullNameText
-            .replace(/^(اسمي|الاسم|أنا|اسمى|اسم)\s*/i, '')
-            .replace(/رقم\s*/i, '')
-            .replace(/تلفون\s*/i, '')
-            .replace(/phone\s*/i, '')
-            .replace(/متابعة\s*/i, '')
-            .trim();
-        }
-      }
-
-      if (!patientName || patientName.length < 2) {
-        const words = cleanMessage.split(/\s+/);
-        const filteredWords = words.filter(w => 
-          !['اسمي', 'الاسم', 'أنا', 'اسمى', 'اسم', 'رقم', 'تلفون', 'phone', 'متابعة'].includes(w.toLowerCase())
-        );
-        const nonPhoneWords = filteredWords.filter(w => !/^01\d{9}$/.test(w));
-        if (nonPhoneWords.length >= 2) {
-          patientName = nonPhoneWords.slice(0, 2).join(' ').trim();
-        } else if (nonPhoneWords.length === 1) {
-          patientName = nonPhoneWords[0].trim();
-        }
-      }
-
-      if (!patientName || patientName.length < 1) {
-        patientName = 'مريض';
-      }
-      if (patientName && patientName.length > 50) {
-        patientName = patientName.substring(0, 50);
-      }
-
-      if (patientName && patientPhone) {
-        await supabase
-          .from('chat_rooms')
-          .update({
-            patient_name: patientName,
-            patient_phone: patientPhone
-          })
-          .eq('id', roomId);
-      }
-    }
 
     res.status(201).json({
       success: true,

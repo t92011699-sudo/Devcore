@@ -232,7 +232,7 @@ const getChatRoom = async (req, res) => {
 };
 
 // ==============================================
-// 4. إرسال رسالة (مع استخراج الاسم والرقم - بدون حجز)
+// 4. إرسال رسالة (تحديث chat_rooms فقط)
 // ==============================================
 const sendMessage = async (req, res) => {
   try {
@@ -326,11 +326,11 @@ const sendMessage = async (req, res) => {
     }
 
     // ==========================================
-    // 📝 تحديث بيانات المريض (من غير حجز)
+    // 📝 تحديث chat_rooms فقط
     // ==========================================
     if (patientName && patientPhone && senderType === 'patient') {
       
-      // تحديث المحادثة
+      // ✅ تحديث المحادثة فقط (chat_rooms)
       await supabase
         .from('chat_rooms')
         .update({
@@ -339,14 +339,8 @@ const sendMessage = async (req, res) => {
         })
         .eq('id', roomId);
 
-      // تحديث المريض في جدول patients
-      await supabase
-        .from('patients')
-        .update({
-          name: patientName,
-          phone: patientPhone
-        })
-        .eq('id', room.patient_id);
+      // ❌ لم نعد نحدث جدول patients
+      // ❌ لم نعد نحدث جدول patient_visits
     }
 
     res.status(201).json({
@@ -440,7 +434,7 @@ const deleteChatRoom = async (req, res) => {
 };
 
 // ==============================================
-// 7. تحديث بيانات المريض من المحادثة
+// 7. تحديث بيانات المريض من المحادثة (اختياري)
 // ==============================================
 const updatePatientFromChat = async (req, res) => {
   try {

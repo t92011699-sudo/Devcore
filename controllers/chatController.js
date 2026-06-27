@@ -3,7 +3,7 @@
 const DEFAULT_DOCTOR_ID = '5b075375-0b21-4e67-91c8-1ab2c709fa85';
 
 // ==============================================
-// 1. إنشاء محادثة جديدة (مع اسم ورقم من الفورم)
+// 1. إنشاء محادثة جديدة
 // ==============================================
 const createChatRoom = async (req, res) => {
   try {
@@ -103,10 +103,15 @@ const getChatRooms = async (req, res) => {
         .eq('sender_type', 'patient')
         .eq('is_read', false);
 
+      const lastMessage = lastMsg?.[0] || null;
+      if (lastMessage) {
+        lastMessage.alignment = lastMessage.sender_type === 'patient' ? 'left' : 'right';
+      }
+
       return {
         ...room,
         unread_count: unreadCount || 0,
-        last_message: lastMsg?.[0] || null
+        last_message: lastMessage
       };
     }));
 
@@ -162,11 +167,17 @@ const getChatRoom = async (req, res) => {
       .eq('sender_type', 'patient')
       .eq('is_read', false);
 
+    // ✅ إضافة alignment لكل رسالة
+    const messagesWithAlignment = (messages || []).map(msg => ({
+      ...msg,
+      alignment: msg.sender_type === 'patient' ? 'left' : 'right'
+    }));
+
     res.json({
       success: true,
       room: {
         ...room,
-        messages: messages || []
+        messages: messagesWithAlignment
       }
     });
 

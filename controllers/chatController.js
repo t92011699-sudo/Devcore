@@ -263,13 +263,30 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    // 3. حفظ الرسالة
+    // 3. تحديد sender_id
+    let finalSenderId = senderId;
+    if (!finalSenderId) {
+      if (senderType === 'doctor') {
+        finalSenderId = room.doctor_id;
+      } else {
+        finalSenderId = room.patient_id;
+      }
+    }
+
+    // لو لسه مفيش sender_id، استخدم fallback
+    if (!finalSenderId) {
+      finalSenderId = senderType === 'doctor' ? 'doctor-123' : 'patient-456';
+    }
+
+    console.log('📤 Final senderId:', finalSenderId);
+
+    // 4. حفظ الرسالة
     const { data: savedMessage, error: msgError } = await supabase
       .from('messages')
       .insert([{
         room_id: roomId,
         sender_type: senderType || 'patient',
-        sender_id: senderId || room.patient_id || 'unknown',
+        sender_id: finalSenderId,
         message: message,
         message_type: messageType || 'text',
         file_url: fileUrl || null,
@@ -286,13 +303,13 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    // 4. تحديث وقت المحادثة
+    // 5. تحديث وقت المحادثة
     await supabase
       .from('chat_rooms')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', roomId);
 
-    // 5. استخراج الاسم والرقم من الرسالة
+    // 6. استخراج الاسم والرقم من الرسالة
     const cleanMessage = message.trim();
     const phoneMatch = cleanMessage.match(/(01\d{9})/);
     const nameMatch = cleanMessage.match(/اسمي\s+([^\d]+)/i) || 
@@ -313,7 +330,7 @@ const sendMessage = async (req, res) => {
       patientPhone = phoneMatch[1].trim();
     }
 
-    // 6. تحديث بيانات المريض لو اتوجدت
+    // 7. تحديث بيانات المريض لو اتوجدت
     if (patientName && patientPhone && senderType === 'patient') {
       await supabase
         .from('chat_rooms')

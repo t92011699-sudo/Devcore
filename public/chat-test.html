@@ -1,5 +1,6 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,6 +12,7 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, sans-serif;
         }
+
         body {
             background: #f0f4f8;
             display: flex;
@@ -19,19 +21,22 @@
             min-height: 100vh;
             padding: 20px;
         }
+
         .app {
             max-width: 1200px;
             width: 100%;
             background: white;
             border-radius: 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }
+
         .tabs {
             display: flex;
             background: #e8edf3;
             border-bottom: 2px solid #d0d7e2;
         }
+
         .tabs button {
             flex: 1;
             padding: 16px;
@@ -43,24 +48,28 @@
             transition: 0.3s;
             border-bottom: 3px solid transparent;
         }
+
         .tabs button.active {
             background: white;
             border-bottom-color: #2c6b9e;
             color: #2c6b9e;
         }
+
         .tab-content {
             display: none;
             padding: 20px;
         }
+
         .tab-content.active {
             display: block;
         }
 
-        /* ===== المريض ===== */
+        /* ===== PATIENT ===== */
         .patient-container {
             max-width: 700px;
             margin: 0 auto;
         }
+
         .patient-header {
             background: #2c6b9e;
             color: white;
@@ -71,12 +80,14 @@
             justify-content: space-between;
             align-items: center;
         }
+
         .patient-header .status {
             font-size: 14px;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             padding: 4px 14px;
             border-radius: 20px;
         }
+
         .patient-messages {
             height: 380px;
             overflow-y: auto;
@@ -86,6 +97,7 @@
             border: 1px solid #e0e4e8;
             margin-bottom: 12px;
         }
+
         .message {
             margin: 8px 0;
             padding: 10px 14px;
@@ -95,19 +107,23 @@
             animation: fadeIn 0.3s ease;
             font-size: 15px;
             line-height: 1.5;
+            position: relative;
         }
+
         .message-left {
             background: #cce5ff;
             margin-right: auto;
             border-bottom-right-radius: 4px;
             text-align: right;
         }
+
         .message-right {
             background: #d4edda;
             margin-left: auto;
             border-bottom-left-radius: 4px;
             text-align: right;
         }
+
         .message-system {
             background: #e8f5e9;
             margin-left: auto;
@@ -116,21 +132,46 @@
             font-style: italic;
             color: #2e7d32;
         }
+
         .message .sender {
             font-size: 11px;
             font-weight: bold;
             opacity: 0.7;
             margin-bottom: 3px;
         }
+
         .message .time {
             font-size: 10px;
             opacity: 0.5;
             margin-top: 4px;
         }
+
+        .message .delete-btn {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+            line-height: 20px;
+            text-align: center;
+        }
+
+        .message:hover .delete-btn {
+            display: block;
+        }
+
         .patient-input {
             display: flex;
             gap: 10px;
         }
+
         .patient-input input {
             flex: 1;
             padding: 10px 14px;
@@ -140,9 +181,11 @@
             outline: none;
             transition: 0.3s;
         }
+
         .patient-input input:focus {
             border-color: #2c6b9e;
         }
+
         .patient-input button {
             padding: 10px 20px;
             border: none;
@@ -152,10 +195,12 @@
             font-weight: bold;
             cursor: pointer;
         }
+
         .patient-input button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+
         .typing-hint {
             font-size: 13px;
             color: #888;
@@ -163,11 +208,13 @@
             padding: 4px 0;
             font-style: italic;
         }
+
         .form-container {
             padding: 16px 0;
             border-bottom: 1px solid #eee;
             margin-bottom: 16px;
         }
+
         .form-container input {
             width: 100%;
             padding: 10px 14px;
@@ -177,9 +224,11 @@
             font-size: 15px;
             outline: none;
         }
+
         .form-container input:focus {
             border-color: #2c6b9e;
         }
+
         .form-container button {
             width: 100%;
             padding: 12px;
@@ -191,12 +240,15 @@
             cursor: pointer;
             font-size: 16px;
         }
+
         .form-container button:hover {
             background: #1e7e34;
         }
+
         .hidden {
             display: none !important;
         }
+
         .room-info {
             padding: 12px 16px;
             background: #e8edf3;
@@ -208,11 +260,13 @@
             align-items: center;
             margin-bottom: 12px;
         }
+
         .room-info .room-id {
             font-weight: bold;
             color: #2c6b9e;
             font-size: 12px;
         }
+
         .chat-footer {
             display: flex;
             justify-content: space-between;
@@ -221,12 +275,13 @@
             color: #999;
         }
 
-        /* ===== الدكتور ===== */
+        /* ===== DOCTOR ===== */
         .doctor-dashboard {
             display: flex;
             gap: 24px;
             flex-wrap: wrap;
         }
+
         .doctor-sidebar {
             flex: 0 0 320px;
             background: #f8f9fc;
@@ -236,11 +291,13 @@
             overflow-y: auto;
             border: 1px solid #e0e4e8;
         }
+
         .doctor-sidebar h3 {
             margin-bottom: 12px;
             font-size: 16px;
             color: #333;
         }
+
         .room-item {
             padding: 12px;
             border-radius: 12px;
@@ -249,26 +306,33 @@
             border: 1px solid #e8edf3;
             cursor: pointer;
             transition: 0.2s;
+            position: relative;
         }
+
         .room-item:hover {
             border-color: #2c6b9e;
         }
+
         .room-item.active {
             border-color: #2c6b9e;
             background: #eaf2fa;
         }
+
         .room-item .name {
             font-weight: bold;
             font-size: 15px;
         }
+
         .room-item .phone {
             font-size: 13px;
             color: #666;
         }
+
         .room-item .guest {
             color: #ff8c00;
             font-size: 12px;
         }
+
         .room-item .unread {
             background: #dc3545;
             color: white;
@@ -277,6 +341,7 @@
             font-size: 11px;
             margin-right: 6px;
         }
+
         .room-item .last-msg {
             font-size: 13px;
             color: #555;
@@ -284,10 +349,33 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
         .room-item .time {
             font-size: 11px;
             color: #999;
         }
+
+        .room-item .delete-room-btn {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            cursor: pointer;
+            display: none;
+            line-height: 24px;
+            text-align: center;
+        }
+
+        .room-item:hover .delete-room-btn {
+            display: block;
+        }
+
         .doctor-chat-area {
             flex: 1;
             min-width: 300px;
@@ -298,6 +386,7 @@
             flex-direction: column;
             max-height: 600px;
         }
+
         .doctor-chat-header {
             background: #2c6b9e;
             color: white;
@@ -306,11 +395,13 @@
             display: flex;
             justify-content: space-between;
         }
+
         .doctor-chat-header small {
             font-weight: normal;
             font-size: 14px;
             opacity: 0.8;
         }
+
         .doctor-messages {
             flex: 1;
             overflow-y: auto;
@@ -319,6 +410,11 @@
             min-height: 300px;
             max-height: 400px;
         }
+
+        .doctor-messages .message .delete-btn {
+            display: block;
+        }
+
         .doctor-input-area {
             display: flex;
             padding: 12px 16px;
@@ -326,6 +422,7 @@
             border-top: 1px solid #e0e4e8;
             background: white;
         }
+
         .doctor-input-area input {
             flex: 1;
             padding: 10px 14px;
@@ -333,6 +430,7 @@
             border-radius: 10px;
             outline: none;
         }
+
         .doctor-input-area button {
             padding: 10px 20px;
             border: none;
@@ -342,10 +440,12 @@
             cursor: pointer;
             font-weight: bold;
         }
+
         .doctor-input-area button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+
         .no-room-selected {
             display: flex;
             justify-content: center;
@@ -354,6 +454,7 @@
             color: #999;
             font-size: 18px;
         }
+
         .refresh-btn {
             width: 100%;
             padding: 10px;
@@ -365,6 +466,7 @@
             cursor: pointer;
             font-weight: bold;
         }
+
         .refresh-btn:hover {
             background: #1a4f7a;
         }
@@ -374,13 +476,28 @@
                 opacity: 0;
                 transform: translateY(5px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 999;
+            animation: fadeIn 0.3s ease;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="app">
@@ -417,7 +534,8 @@
                 <div class="typing-hint" id="typingHint"></div>
 
                 <div class="patient-input hidden" id="patientInput">
-                    <input type="text" id="patientMsgInput" placeholder="اكتب رسالتك..." onkeypress="if(event.key==='Enter') sendPatientMessage()">
+                    <input type="text" id="patientMsgInput" placeholder="اكتب رسالتك..."
+                        onkeypress="if(event.key==='Enter') sendPatientMessage()">
                     <button id="patientSendBtn" onclick="sendPatientMessage()" disabled>📤 إرسال</button>
                 </div>
 
@@ -447,7 +565,8 @@
                         <div class="no-room-selected">👈 اختر محادثة من القائمة لعرض الرسائل</div>
                     </div>
                     <div class="doctor-input-area">
-                        <input type="text" id="doctorMsgInput" placeholder="اكتب ردك..." onkeypress="if(event.key==='Enter') sendDoctorMessage()" disabled>
+                        <input type="text" id="doctorMsgInput" placeholder="اكتب ردك..."
+                            onkeypress="if(event.key==='Enter') sendDoctorMessage()" disabled>
                         <button id="doctorSendBtn" onclick="sendDoctorMessage()" disabled>📤 إرسال</button>
                     </div>
                 </div>
@@ -484,16 +603,28 @@
         const patientMsgCountEl = document.getElementById('patientMsgCount');
         const typingHint = document.getElementById('typingHint');
 
-        function addPatientMessage(senderType, message, alignment) {
+        function showToast(msg) {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            const div = document.createElement('div');
+            div.className = 'toast';
+            div.textContent = msg;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        function addPatientMessage(senderType, message, alignment, msgId) {
             const div = document.createElement('div');
             const cls = alignment === 'left' ? 'message-left' : alignment === 'right' ? 'message-right' : 'message-system';
             div.className = `message ${cls}`;
+            div.dataset.msgId = msgId || '';
             const senderName = senderType === 'patient' ? '🧑‍⚕️ مريض' :
                 senderType === 'system' ? '🤖 النظام' : '👨‍⚕️ دكتور';
             div.innerHTML = `
                 <div class="sender">${senderName}</div>
                 <div>${message}</div>
                 <div class="time">${new Date().toLocaleTimeString()}</div>
+                ${msgId ? `<button class="delete-btn" onclick="deleteMessage('${msgId}')">✕</button>` : ''}
             `;
             patientMessagesDiv.appendChild(div);
             patientMessagesDiv.scrollTop = patientMessagesDiv.scrollHeight;
@@ -543,6 +674,7 @@
                     showPatientInput(true);
                     setPatientStatus(true);
                     if (data.autoMessage) {
+                        // الرسالة الترحيبية من الـ system
                         addPatientMessage('system', data.autoMessage, 'right');
                     }
                     startPatientPolling();
@@ -571,7 +703,7 @@
                         const newMsgs = messages.slice(currentCount);
                         newMsgs.forEach(msg => {
                             const alignment = msg.alignment || (msg.sender_type === 'patient' ? 'left' : 'right');
-                            addPatientMessage(msg.sender_type, msg.message, alignment);
+                            addPatientMessage(msg.sender_type, msg.message, alignment, msg.id);
                         });
                     }
                     if (data.room.patient_name && data.room.patient_name !== patientName) {
@@ -591,6 +723,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ roomId: currentRoomId, senderType: 'patient', message: msg })
                 });
+                // عرض مؤقت للرسالة
                 addPatientMessage('patient', msg, 'left');
                 patientMsgInput.value = '';
                 await fetchPatientMessages();
@@ -609,6 +742,60 @@
         const doctorSendBtn = document.getElementById('doctorSendBtn');
         const doctorRoomName = document.getElementById('doctorRoomName');
 
+        // ============================================================
+        // 📌 DELETE MESSAGE (للدكتور)
+        // ============================================================
+        async function deleteMessage(messageId) {
+            if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/chat/messages/${messageId}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ تم حذف الرسالة بنجاح');
+                    // حذف من الواجهة
+                    document.querySelectorAll(`.message[data-msg-id="${messageId}"]`).forEach(el => el.remove());
+                    // تحديث العداد
+                    patientMsgCount = patientMessagesDiv.querySelectorAll('.message').length;
+                    patientMsgCountEl.textContent = `${patientMsgCount} رسائل`;
+                    // تحديث للمريض والدكتور
+                    if (doctorCurrentRoomId) fetchDoctorMessages();
+                } else {
+                    alert('❌ فشل حذف الرسالة: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (e) { alert('❌ خطأ في الاتصال: ' + e.message); }
+        }
+
+        // ============================================================
+        // 📌 DELETE ROOM (للدكتور)
+        // ============================================================
+        async function deleteRoom(roomId) {
+            if (!confirm('⚠️ هل أنت متأكد من حذف هذه المحادثة بالكامل؟')) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/chat/rooms/${roomId}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ تم حذف المحادثة بنجاح');
+                    if (doctorCurrentRoomId === roomId) {
+                        doctorCurrentRoomId = '';
+                        doctorMessagesDiv.innerHTML = '<div class="no-room-selected">👈 اختر محادثة من القائمة لعرض الرسائل</div>';
+                        doctorRoomName.textContent = 'اختر محادثة من القائمة';
+                        doctorMsgInput.disabled = true;
+                        doctorSendBtn.disabled = true;
+                    }
+                    refreshRooms();
+                } else {
+                    alert('❌ فشل حذف المحادثة: ' + (data.error || 'خطأ غير معروف'));
+                }
+            } catch (e) { alert('❌ خطأ في الاتصال: ' + e.message); }
+        }
+
+        // ============================================================
+        // 📌 DOCTOR UI
+        // ============================================================
         async function refreshRooms() {
             try {
                 const res = await fetch(`${API_BASE}/api/chat/rooms`);
@@ -628,6 +815,7 @@
                         <div class="phone">📱 ${room.patient_phone || 'غير معروف'}</div>
                         <div class="last-msg">${room.last_message ? room.last_message.message : 'لا توجد رسائل'}</div>
                         <div class="time">${new Date(room.updated_at).toLocaleString()}</div>
+                        <button class="delete-room-btn" onclick="event.stopPropagation(); deleteRoom('${room.id}')">✕</button>
                     `;
                     div.onclick = () => selectDoctorRoom(room.id);
                     roomsList.appendChild(div);
@@ -660,14 +848,16 @@
                     msgs.forEach(m => {
                         const div = document.createElement('div');
                         const cls = m.alignment === 'left' ? 'message-left' : m.alignment === 'right' ? 'message-right' :
-                        'message-system';
+                            'message-system';
                         div.className = `message ${cls}`;
+                        div.dataset.msgId = m.id || '';
                         const sender = m.sender_type === 'patient' ? '🧑‍⚕️ مريض' :
                             m.sender_type === 'system' ? '🤖 النظام' : '👨‍⚕️ دكتور';
                         div.innerHTML = `
                             <div class="sender">${sender}</div>
                             <div>${m.message}</div>
                             <div class="time">${new Date(m.created_at).toLocaleTimeString()}</div>
+                            ${m.id ? `<button class="delete-btn" onclick="deleteMessage('${m.id}')">✕</button>` : ''}
                         `;
                         doctorMessagesDiv.appendChild(div);
                     });
@@ -715,4 +905,5 @@
         });
     </script>
 </body>
+
 </html>

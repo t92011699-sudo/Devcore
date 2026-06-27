@@ -232,7 +232,7 @@ const getChatRoom = async (req, res) => {
 };
 
 // ==============================================
-// 4. إرسال رسالة (مع استخراج الاسم والرقم)
+// 4. إرسال رسالة (مع استخراج الاسم والرقم تلقائياً)
 // ==============================================
 const sendMessage = async (req, res) => {
   try {
@@ -280,36 +280,49 @@ const sendMessage = async (req, res) => {
       .eq('id', roomId);
 
     // ==========================================
-    // 🔍 استخراج الاسم والرقم من الرسالة
+    // 🔍 استخراج الاسم والرقم من أي رسالة
     // ==========================================
     const cleanMessage = message.trim();
 
-    const nameMatch = cleanMessage.match(/اسمي\s+([^\d]+)/i) || 
-                      cleanMessage.match(/الاسم\s+([^\d]+)/i) ||
-                      cleanMessage.match(/أنا\s+([^\d]+)/i) ||
-                      cleanMessage.match(/اسمى\s+([^\d]+)/i);
-
+    // 1. استخراج الرقم (أول رقم بيبدأ بـ 01 ويتكون من 11 رقم)
     const phoneMatch = cleanMessage.match(/(01\d{9})/);
-
-    let patientName = null;
     let patientPhone = null;
+    if (phoneMatch && phoneMatch[1]) {
+      patientPhone = phoneMatch[1].trim();
+    }
 
-    if (nameMatch && nameMatch[1]) {
-      patientName = nameMatch[1]
-        .replace(/\d/g, '')              // إزالة الأرقام
-        .replace(/رقم\s*:/i, '')         // إزالة كلمة "رقم:"
-        .replace(/تلفون\s*:/i, '')       // إزالة كلمة "تلفون:"
-        .replace(/phone\s*:/i, '')       // إزالة كلمة "phone:"
-        .trim();
-      
-      // لو الاسم طويل جداً، نختصره
-      if (patientName.length > 50) {
-        patientName = patientName.substring(0, 50);
+    // 2. استخراج الاسم (كل الكلمات قبل الرقم)
+    let patientName = null;
+    if (phoneMatch) {
+      const textBeforePhone = cleanMessage.substring(0, phoneMatch.index).trim();
+      if (textBeforePhone) {
+        patientName = textBeforePhone
+          .replace(/^(اسمي|الاسم|أنا|اسمى|اسم)\s*/i, '') // إزالة الكلمات المفتاحية
+          .replace(/رقم\s*/i, '')                         // إزالة كلمة رقم
+          .replace(/تلفون\s*/i, '')                       // إزالة كلمة تلفون
+          .replace(/phone\s*/i, '')                       // إزالة كلمة phone
+          .trim();
       }
     }
 
-    if (phoneMatch && phoneMatch[1]) {
-      patientPhone = phoneMatch[1].trim();
+    // لو مفيش اسم قبل الرقم، خد أول 3 كلمات من الرسالة
+    if (!patientName && cleanMessage) {
+      const words = cleanMessage.split(/\s+/);
+      if (words.length >= 2) {
+        patientName = words.slice(0, 3).join(' ').trim();
+      } else if (words.length === 1) {
+        patientName = words[0].trim();
+      }
+    }
+
+    // لو الاسم لسه فاضي، استخدم "مريض"
+    if (!patientName) {
+      patientName = 'مريض';
+    }
+
+    // لو الاسم طويل جداً، نختصره
+    if (patientName && patientName.length > 50) {
+      patientName = patientName.substring(0, 50);
     }
 
     // لو لقينا الاسم والرقم والمُرسِل مريض

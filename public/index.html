@@ -1,4 +1,4 @@
- !DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 
 <head>
@@ -64,7 +64,6 @@
             display: block;
         }
 
-        /* ===== PATIENT ===== */
         .patient-container {
             max-width: 700px;
             margin: 0 auto;
@@ -145,12 +144,6 @@
             text-align: left;
         }
 
-        .msg .read-status {
-            font-size: 10px;
-            opacity: 0.6;
-            margin-left: 8px;
-        }
-
         .patient-input {
             display: flex;
             gap: 10px;
@@ -210,7 +203,6 @@
             display: block;
         }
 
-        /* ===== DOCTOR ===== */
         .doctor-dashboard {
             display: flex;
             gap: 24px;
@@ -433,7 +425,6 @@
             }
         }
 
-        /* ===== Responsive ===== */
         @media (max-width: 768px) {
             .doctor-dashboard {
                 flex-direction: column;
@@ -475,7 +466,6 @@
             <button onclick="switchTab('doctor')">👨‍⚕️ Dashboard الدكتور</button>
         </div>
 
-        <!-- ========== TAB 1: PATIENT ========== -->
         <div id="tab-patient" class="tab-content active">
             <div class="patient-container">
                 <div class="patient-header">
@@ -511,7 +501,6 @@
             </div>
         </div>
 
-        <!-- ========== TAB 2: DOCTOR ========== -->
         <div id="tab-doctor" class="tab-content">
             <div class="doctor-dashboard">
                 <div class="doctor-sidebar">
@@ -559,7 +548,7 @@
         let patientName = 'Guest';
         let patientPhone = '01001234567';
         let patientPollingInterval = null;
-        let patientLastMessageId = null; // ✅ استخدام ID بدلاً من Count
+        let patientLastMessageId = null;
         let patientIsFirstFetch = true;
 
         let doctorCurrentRoomId = '';
@@ -577,7 +566,7 @@
         }
 
         // ============================================================
-        // 📌 PATIENT SIDE (Polling محسن)
+        // 📌 PATIENT SIDE
         // ============================================================
         function addPatientMessage(type, text, sender = '', time = null) {
             const div = document.createElement('div');
@@ -689,7 +678,7 @@
             patientPollingInterval = setInterval(fetchPatientMessages, 3000);
         }
 
-        // ===== جلب الرسائل (محسن) =====
+        // ===== جلب الرسائل =====
         async function fetchPatientMessages() {
             if (!patientRoomId) return;
             try {
@@ -698,15 +687,11 @@
                 if (data.success && data.room) {
                     const msgs = data.room.messages || [];
 
-                    // ✅ استخدام lastMessageId بدلاً من count
                     if (patientLastMessageId) {
-                        // جلب الرسائل الجديدة فقط
                         const newMsgs = msgs.filter(m => m.id > patientLastMessageId);
                         newMsgs.forEach(m => {
                             const sender = m.sender_type === 'doctor' ? '👨‍⚕️ دكتور' : '🧑‍⚕️ مريض';
                             addPatientMessage(m.sender_type, m.message, sender, m.created_at);
-
-                            // استخراج الاسم والرقم من رسائل المريض
                             if (m.sender_type === 'patient') {
                                 extractPatientInfo(m.message);
                             }
@@ -715,7 +700,6 @@
                             patientLastMessageId = msgs[msgs.length - 1].id;
                         }
                     } else if (patientIsFirstFetch) {
-                        // أول جلب: عرض كل الرسائل
                         msgs.forEach(m => {
                             const sender = m.sender_type === 'doctor' ? '👨‍⚕️ دكتور' : '🧑‍⚕️ مريض';
                             addPatientMessage(m.sender_type, m.message, sender, m.created_at);
@@ -737,11 +721,7 @@
         // ===== استخراج الاسم والرقم =====
         function extractPatientInfo(message) {
             const cleanMessage = message.trim();
-
-            // استخراج الرقم (أكثر دقة)
             const phoneMatch = cleanMessage.match(/(01[0125]\d{8})/);
-
-            // استخراج الاسم (أكثر شمولاً)
             const nameMatch = cleanMessage.match(/(?:اسمي|الاسم|أنا|اسم)\s*[:]?\s*([^\d]+?)(?:\s*رقم|\s*تلفون|\s*موبايل|$)/i);
 
             let extractedName = null;
@@ -773,7 +753,7 @@
             }
         }
 
-        // ===== إرسال رسالة (محسن) =====
+        // ===== إرسال رسالة (محسن - مع إصلاح UUID) =====
         async function sendPatientMessage() {
             const input = document.getElementById('patientMsgInput');
             const msg = input.value.trim();
@@ -787,13 +767,14 @@
             sendBtn.disabled = true;
 
             try {
+                // ✅ إصلاح: إرسال senderId كـ null - السيرفر سيستخدم patient_id من الغرفة
                 const response = await fetch(`${API_BASE}/api/chat/messages`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         roomId: patientRoomId,
                         senderType: 'patient',
-                        senderId: 'patient-' + Date.now(),
+                        senderId: null,
                         message: msg,
                         messageType: 'text',
                         fileUrl: null
@@ -802,13 +783,12 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // ✅ إضافة الرسالة محلياً مع تحديث lastMessageId
                     addPatientMessage('patient', msg, '👤 أنت');
                     if (data.data && data.data.id) {
                         patientLastMessageId = data.data.id;
                     }
                     input.value = '';
-                    await fetchPatientMessages(); // مزامنة إضافية
+                    await fetchPatientMessages();
                 } else {
                     alert('❌ فشل إرسال الرسالة: ' + (data.error || 'خطأ غير معروف'));
                 }
@@ -820,7 +800,7 @@
         }
 
         // ============================================================
-        // 📌 DOCTOR DASHBOARD (محسن)
+        // 📌 DOCTOR DASHBOARD
         // ============================================================
         async function refreshRooms() {
             try {
@@ -895,6 +875,7 @@
             }
         }
 
+        // ===== إرسال رسالة الدكتور (محسن - مع إصلاح UUID) =====
         async function sendDoctorMessage() {
             const input = document.getElementById('doctorMsgInput');
             const msg = input.value.trim();
@@ -904,13 +885,14 @@
             sendBtn.disabled = true;
 
             try {
+                // ✅ إصلاح: إرسال senderId كـ null - السيرفر سيستخدم doctor_id من الغرفة
                 await fetch(`${API_BASE}/api/chat/messages`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         roomId: doctorCurrentRoomId,
                         senderType: 'doctor',
-                        senderId: 'doctor-' + Date.now(),
+                        senderId: null,
                         message: msg,
                         messageType: 'text',
                         fileUrl: null

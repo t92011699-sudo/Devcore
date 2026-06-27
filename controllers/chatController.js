@@ -169,14 +169,13 @@ const getChatRooms = async (req, res) => {
 };
 
 // ==============================================
-// 3. جلب محادثة معينة (مع رسائلها) - ✅ معدلة
+// 3. جلب محادثة معينة (مع رسائلها)
 // ==============================================
 const getChatRoom = async (req, res) => {
   try {
     const { roomId } = req.params;
     console.log('📌 Fetching room:', roomId);
 
-    // 1. جلب المحادثة
     const { data: room, error: roomError } = await supabase
       .from('chat_rooms')
       .select('*')
@@ -198,7 +197,6 @@ const getChatRoom = async (req, res) => {
       });
     }
 
-    // 2. جلب رسائل المحادثة
     const { data: messages, error: msgError } = await supabase
       .from('messages')
       .select('*')
@@ -209,7 +207,6 @@ const getChatRoom = async (req, res) => {
       console.error('❌ Messages error:', msgError);
     }
 
-    // 3. تحديث الرسائل غير المقروءة
     await supabase
       .from('messages')
       .update({ is_read: true, read_at: new Date().toISOString() })
@@ -235,7 +232,7 @@ const getChatRoom = async (req, res) => {
 };
 
 // ==============================================
-// 4. إرسال رسالة
+// 4. إرسال رسالة (مع استخراج الاسم والرقم)
 // ==============================================
 const sendMessage = async (req, res) => {
   try {
@@ -282,23 +279,40 @@ const sendMessage = async (req, res) => {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', roomId);
 
-    // استخراج الاسم والرقم من الرسالة
-    const nameMatch = message.match(/اسمي\s+([^\d]+)/i) || 
-                      message.match(/الاسم\s+([^\d]+)/i) ||
-                      message.match(/أنا\s+([^\d]+)/i);
-    const phoneMatch = message.match(/(01\d{9})/);
+    // ==========================================
+    // 🔍 استخراج الاسم والرقم من الرسالة
+    // ==========================================
+    const cleanMessage = message.trim();
+
+    const nameMatch = cleanMessage.match(/اسمي\s+([^\d]+)/i) || 
+                      cleanMessage.match(/الاسم\s+([^\d]+)/i) ||
+                      cleanMessage.match(/أنا\s+([^\d]+)/i) ||
+                      cleanMessage.match(/اسمى\s+([^\d]+)/i);
+
+    const phoneMatch = cleanMessage.match(/(01\d{9})/);
 
     let patientName = null;
     let patientPhone = null;
 
     if (nameMatch && nameMatch[1]) {
-      patientName = nameMatch[1].trim();
+      patientName = nameMatch[1]
+        .replace(/\d/g, '')              // إزالة الأرقام
+        .replace(/رقم\s*:/i, '')         // إزالة كلمة "رقم:"
+        .replace(/تلفون\s*:/i, '')       // إزالة كلمة "تلفون:"
+        .replace(/phone\s*:/i, '')       // إزالة كلمة "phone:"
+        .trim();
+      
+      // لو الاسم طويل جداً، نختصره
+      if (patientName.length > 50) {
+        patientName = patientName.substring(0, 50);
+      }
     }
 
     if (phoneMatch && phoneMatch[1]) {
       patientPhone = phoneMatch[1].trim();
     }
 
+    // لو لقينا الاسم والرقم والمُرسِل مريض
     if (patientName && patientPhone && senderType === 'patient') {
       // تحديث المحادثة
       await supabase
@@ -309,7 +323,7 @@ const sendMessage = async (req, res) => {
         })
         .eq('id', roomId);
 
-      // تحديث المريض
+      // تحديث المريض في جدول patients
       await supabase
         .from('patients')
         .update({
@@ -322,7 +336,11 @@ const sendMessage = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Message sent successfully',
-      data: savedMessage
+      data: savedMessage,
+      extracted: {
+        name: patientName,
+        phone: patientPhone
+      }
     });
 
   } catch (error) {

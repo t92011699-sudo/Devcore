@@ -232,12 +232,15 @@ const getChatRoom = async (req, res) => {
 };
 
 // ==============================================
-// 4. إرسال رسالة (مع استخراج الاسم والرقم تلقائياً)
+// 4. إرسال رسالة (مع استخراج الاسم والرقم)
 // ==============================================
 const sendMessage = async (req, res) => {
   try {
     const { roomId, message, senderType, senderId, messageType, fileUrl } = req.body;
+    
+    console.log('📥 Received:', { roomId, message, senderType, senderId });
 
+    // 1. التحقق من البيانات
     if (!roomId || !message) {
       return res.status(400).json({
         success: false,
@@ -245,6 +248,7 @@ const sendMessage = async (req, res) => {
       });
     }
 
+    // 2. جلب المحادثة
     const { data: room, error: roomError } = await supabase
       .from('chat_rooms')
       .select('*')
@@ -252,18 +256,20 @@ const sendMessage = async (req, res) => {
       .single();
 
     if (roomError || !room) {
+      console.error('❌ Room error:', roomError);
       return res.status(404).json({
         success: false,
         error: 'Chat room not found'
       });
     }
 
+    // 3. حفظ الرسالة
     const { data: savedMessage, error: msgError } = await supabase
       .from('messages')
       .insert([{
         room_id: roomId,
         sender_type: senderType || 'patient',
-        sender_id: senderId || room.patient_id,
+        sender_id: senderId || room.patient_id || 'unknown',
         message: message,
         message_type: messageType || 'text',
         file_url: fileUrl || null,
@@ -272,62 +278,43 @@ const sendMessage = async (req, res) => {
       .select()
       .single();
 
-    if (msgError) throw msgError;
+    if (msgError) {
+      console.error('❌ Message error:', msgError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to save message: ' + msgError.message
+      });
+    }
 
+    // 4. تحديث وقت المحادثة
     await supabase
       .from('chat_rooms')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', roomId);
 
-    // ==========================================
-    // 🔍 استخراج الاسم والرقم من أي رسالة
-    // ==========================================
+    // 5. استخراج الاسم والرقم من الرسالة
     const cleanMessage = message.trim();
-
-    // 1. استخراج الرقم (أول رقم بيبدأ بـ 01 ويتكون من 11 رقم)
     const phoneMatch = cleanMessage.match(/(01\d{9})/);
+    const nameMatch = cleanMessage.match(/اسمي\s+([^\d]+)/i) || 
+                      cleanMessage.match(/الاسم\s+([^\d]+)/i) ||
+                      cleanMessage.match(/أنا\s+([^\d]+)/i);
+
+    let patientName = null;
     let patientPhone = null;
+
+    if (nameMatch && nameMatch[1]) {
+      patientName = nameMatch[1]
+        .replace(/\d/g, '')
+        .replace(/رقم\s*:/i, '')
+        .replace(/تلفون\s*:/i, '')
+        .trim();
+    }
     if (phoneMatch && phoneMatch[1]) {
       patientPhone = phoneMatch[1].trim();
     }
 
-    // 2. استخراج الاسم (كل الكلمات قبل الرقم)
-    let patientName = null;
-    if (phoneMatch) {
-      const textBeforePhone = cleanMessage.substring(0, phoneMatch.index).trim();
-      if (textBeforePhone) {
-        patientName = textBeforePhone
-          .replace(/^(اسمي|الاسم|أنا|اسمى|اسم)\s*/i, '') // إزالة الكلمات المفتاحية
-          .replace(/رقم\s*/i, '')                         // إزالة كلمة رقم
-          .replace(/تلفون\s*/i, '')                       // إزالة كلمة تلفون
-          .replace(/phone\s*/i, '')                       // إزالة كلمة phone
-          .trim();
-      }
-    }
-
-    // لو مفيش اسم قبل الرقم، خد أول 3 كلمات من الرسالة
-    if (!patientName && cleanMessage) {
-      const words = cleanMessage.split(/\s+/);
-      if (words.length >= 2) {
-        patientName = words.slice(0, 3).join(' ').trim();
-      } else if (words.length === 1) {
-        patientName = words[0].trim();
-      }
-    }
-
-    // لو الاسم لسه فاضي، استخدم "مريض"
-    if (!patientName) {
-      patientName = 'مريض';
-    }
-
-    // لو الاسم طويل جداً، نختصره
-    if (patientName && patientName.length > 50) {
-      patientName = patientName.substring(0, 50);
-    }
-
-    // لو لقينا الاسم والرقم والمُرسِل مريض
+    // 6. تحديث بيانات المريض لو اتوجدت
     if (patientName && patientPhone && senderType === 'patient') {
-      // تحديث المحادثة
       await supabase
         .from('chat_rooms')
         .update({
@@ -336,7 +323,6 @@ const sendMessage = async (req, res) => {
         })
         .eq('id', roomId);
 
-      // تحديث المريض في جدول patients
       await supabase
         .from('patients')
         .update({
@@ -349,18 +335,14 @@ const sendMessage = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Message sent successfully',
-      data: savedMessage,
-      extracted: {
-        name: patientName,
-        phone: patientPhone
-      }
+      data: savedMessage
     });
 
   } catch (error) {
     console.error('❌ Send message error:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message || 'Internal server error'
     });
   }
 };

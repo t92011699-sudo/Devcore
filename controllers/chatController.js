@@ -9,6 +9,8 @@ const createChatRoom = async (req, res) => {
   try {
     const doctorId = req.body.doctor_id || DEFAULT_DOCTOR_ID;
 
+    console.log('📥 Creating chat room for doctor:', doctorId);
+
     const { data: room, error: roomError } = await supabase
       .from('chat_rooms')
       .insert([{
@@ -20,19 +22,32 @@ const createChatRoom = async (req, res) => {
       .select()
       .single();
 
-    if (roomError) throw roomError;
+    if (roomError) {
+      console.error('❌ Room creation error:', roomError);
+      throw roomError;
+    }
+
+    console.log('✅ Room created:', room.id);
 
     const autoMessage = `👋 أهلاً بك! 
 نرجو أن تخبرنا باسمك ورقم تليفونك للمتابعة.`;
 
-    await supabase
+    const { data: messageData, error: msgError } = await supabase
       .from('chat_messages')
       .insert([{
         room_id: room.id,
         sender_type: 'system',
         message: autoMessage,
         is_read: false
-      }]);
+      }])
+      .select()
+      .single();
+
+    if (msgError) {
+      console.error('❌ Message insertion error:', msgError);
+    } else {
+      console.log('✅ Auto message saved:', messageData.id);
+    }
 
     res.status(201).json({
       success: true,

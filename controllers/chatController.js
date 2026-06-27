@@ -57,41 +57,40 @@ const getChatRooms = async (req, res) => {
   try {
     const doctorId = req.query.doctor_id || DEFAULT_DOCTOR_ID;
 
-    const { data, error } = await supabase
+    const { data: rooms, error: roomsError } = await supabase
       .from('chat_rooms')
-      .select(`
-        *,
-        messages:chat_messages(
-          id,
-          message,
-          sender_type,
-          created_at,
-          is_read
-        )
-      `)
+      .select('*')
       .eq('doctor_id', doctorId)
       .order('updated_at', { ascending: false });
 
-    if (error) throw error;
+    if (roomsError) throw roomsError;
 
-    const roomsWithUnread = data.map(room => {
-      const unreadCount = room.messages?.filter(
-        m => m.sender_type === 'patient' && !m.is_read
-      ).length || 0;
-      
-      const lastMessage = room.messages?.[room.messages.length - 1] || null;
+    const roomsWithMessages = await Promise.all(rooms.map(async (room) => {
+      const { data: lastMsg } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('room_id', room.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const { count: unreadCount } = await supabase
+        .from('chat_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('room_id', room.id)
+        .eq('sender_type', 'patient')
+        .eq('is_read', false);
 
       return {
         ...room,
-        unread_count: unreadCount,
-        last_message: lastMessage
+        unread_count: unreadCount || 0,
+        last_message: lastMsg?.[0] || null
       };
-    });
+    }));
 
     res.json({
       success: true,
-      rooms: roomsWithUnread,
-      count: roomsWithUnread.length
+      rooms: roomsWithMessages,
+      count: roomsWithMessages.length
     });
 
   } catch (error) {
@@ -104,32 +103,33 @@ const getChatRooms = async (req, res) => {
 };
 
 // ==============================================
-// 3. جلب محادثة معينة
+// 3. جلب محادثة معينة (مع رسائلها)
 // ==============================================
 const getChatRoom = async (req, res) => {
   try {
     const { roomId } = req.params;
 
-    const { data: room, error } = await supabase
+    const { data: room, error: roomError } = await supabase
       .from('chat_rooms')
-      .select(`
-        *,
-        messages:chat_messages(
-          id,
-          message,
-          sender_type,
-          created_at,
-          is_read
-        )
-      `)
+      .select('*')
       .eq('id', roomId)
       .single();
 
-    if (error || !room) {
+    if (roomError || !room) {
       return res.status(404).json({
         success: false,
         error: 'Chat room not found'
       });
+    }
+
+    const { data: messages, error: msgError } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('room_id', roomId)
+      .order('created_at', { ascending: true });
+
+    if (msgError) {
+      console.error('❌ Messages error:', msgError);
     }
 
     await supabase
@@ -141,7 +141,10 @@ const getChatRoom = async (req, res) => {
 
     res.json({
       success: true,
-      room: room
+      room: {
+        ...room,
+        messages: messages || []
+      }
     });
 
   } catch (error) {
@@ -154,7 +157,7 @@ const getChatRoom = async (req, res) => {
 };
 
 // ==============================================
-// 4. إرسال رسالة (استخراج الاسم والرقم بأي ترتيب)
+// 4. إرسال رسالة
 // ==============================================
 const sendMessage = async (req, res) => {
   try {
@@ -167,7 +170,6 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    // حفظ الرسالة
     const { data: savedMessage, error: msgError } = await supabase
       .from('chat_messages')
       .insert([{
@@ -192,70 +194,54 @@ const sendMessage = async (req, res) => {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', roomId);
 
-    // ==========================================
-    // 🔍 استخراج الاسم والرقم من أي رسالة (بأي ترتيب)
-    // ==========================================
+    // استخراج الاسم والرقم
     if (senderType === 'patient') {
       const cleanMessage = message.trim();
-      
-      // 1. استخراج الرقم (أول رقم يبدأ بـ 01 ويتكون من 11 رقم)
       const phoneMatch = cleanMessage.match(/(01\d{9})/);
       let patientPhone = null;
       if (phoneMatch && phoneMatch[1]) {
         patientPhone = phoneMatch[1].trim();
       }
 
-      // 2. استخراج الاسم (كل الكلمات ما عدا الرقم)
       let patientName = null;
-      
       if (phoneMatch) {
-        // خذ كل الكلام قبل الرقم وبعده معاً
         const textBeforePhone = cleanMessage.substring(0, phoneMatch.index).trim();
         const textAfterPhone = cleanMessage.substring(phoneMatch.index + phoneMatch[0].length).trim();
-        
-        // اجمع النص قبل وبعد الرقم (لو موجود)
         let fullNameText = textBeforePhone;
         if (textAfterPhone) {
           fullNameText = fullNameText + ' ' + textAfterPhone;
         }
-        
-        // نظف النص من الكلمات المفتاحية
         if (fullNameText) {
           patientName = fullNameText
-            .replace(/^(اسمي|الاسم|أنا|اسمى|اسم)\s*/i, '') // إزالة الكلمات المفتاحية
-            .replace(/رقم\s*/i, '')                         // إزالة كلمة رقم
-            .replace(/تلفون\s*/i, '')                       // إزالة كلمة تلفون
-            .replace(/phone\s*/i, '')                       // إزالة كلمة phone
-            .replace(/متابعة\s*/i, '')                     // إزالة كلمة متابعة
+            .replace(/^(اسمي|الاسم|أنا|اسمى|اسم)\s*/i, '')
+            .replace(/رقم\s*/i, '')
+            .replace(/تلفون\s*/i, '')
+            .replace(/phone\s*/i, '')
+            .replace(/متابعة\s*/i, '')
             .trim();
         }
       }
 
-      // لو مفيش اسم، خذ أول كلمتين من الرسالة
       if (!patientName || patientName.length < 2) {
         const words = cleanMessage.split(/\s+/);
-        // استبعد الكلمات المفتاحية
         const filteredWords = words.filter(w => 
           !['اسمي', 'الاسم', 'أنا', 'اسمى', 'اسم', 'رقم', 'تلفون', 'phone', 'متابعة'].includes(w.toLowerCase())
         );
-        if (filteredWords.length >= 2) {
-          patientName = filteredWords.slice(0, 2).join(' ').trim();
-        } else if (filteredWords.length === 1) {
-          patientName = filteredWords[0].trim();
+        const nonPhoneWords = filteredWords.filter(w => !/^01\d{9}$/.test(w));
+        if (nonPhoneWords.length >= 2) {
+          patientName = nonPhoneWords.slice(0, 2).join(' ').trim();
+        } else if (nonPhoneWords.length === 1) {
+          patientName = nonPhoneWords[0].trim();
         }
       }
 
-      // لو الاسم لسه فاضي، استخدم "مريض"
       if (!patientName || patientName.length < 1) {
         patientName = 'مريض';
       }
-
-      // لو الاسم طويل جداً، نختصره
       if (patientName && patientName.length > 50) {
         patientName = patientName.substring(0, 50);
       }
 
-      // لو لقينا الاسم والرقم، نحدث المحادثة
       if (patientName && patientPhone) {
         await supabase
           .from('chat_rooms')
